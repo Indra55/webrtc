@@ -88,3 +88,4 @@ server.listen(port, '0.0.0.0', () => {
   console.log(`Express server listening on port ${port}`)
   console.log(`Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`)
 })
+module.exports = app; 
