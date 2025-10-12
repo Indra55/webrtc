@@ -6,10 +6,38 @@ const videoChatContainer = document.getElementById('video-chat-container')
 const localVideoComponent = document.getElementById('local-video')
 const remoteVideoComponent = document.getElementById('remote-video')
 
-const socket = io(window.location.origin, {
+// Get the current protocol and host
+const protocol = window.location.protocol;
+const host = window.location.host;
+
+// Initialize Socket.IO with the correct URL
+const socket = io({
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
   withCredentials: true,
-  transports: ['websocket', 'polling']
-})
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000
+});
+
+// Debug connection events
+socket.on('connect', () => {
+  console.log('Connected to WebSocket server');  
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected from WebSocket server. Reason:', reason);
+  if (reason === 'io server disconnect') {
+    // Reconnect if the server disconnects us
+    socket.connect();
+  }
+});
 const mediaConstraints = {
   audio: true,
   video: { width: 1280, height: 720 },
