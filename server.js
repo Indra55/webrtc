@@ -2,22 +2,28 @@ const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
 const path = require('path')
+const cors = require('cors')
 
 const app = express()
 const server = http.createServer(app)
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: true, // Allow all origins in development
+  credentials: true
+}))
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')))
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.CLIENT_URL || 'http://localhost:3000'
-      : 'http://localhost:3000',
+    origin: '*', // Allow all origins for WebSocket connections
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 })
 
 app.get('/health', (req, res) => {

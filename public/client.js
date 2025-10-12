@@ -6,12 +6,40 @@ const videoChatContainer = document.getElementById('video-chat-container')
 const localVideoComponent = document.getElementById('local-video')
 const remoteVideoComponent = document.getElementById('remote-video')
 
-// Use the current host for WebSocket connection
-const socket = io({
-  withCredentials: true,
-  transports: ['websocket', 'polling'],
-  path: '/socket.io/'
-})
+// Initialize Socket.IO connection
+let socket;
+
+function initializeSocket() {
+  console.log('Initializing Socket.IO connection...');
+  
+  socket = io({
+    withCredentials: true,
+    transports: ['websocket', 'polling'],
+    path: '/socket.io/',
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000
+  });
+
+  socket.on('connect', () => {
+    console.log('Connected to WebSocket server');
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Connection Error:', error);
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('Disconnected:', reason);
+  });
+}
+
+// Initialize the socket when the page loads
+window.addEventListener('DOMContentLoaded', () => {
+  initializeSocket();
+});
 const mediaConstraints = {
   audio: true,
   video: { width: 1280, height: 720 },
