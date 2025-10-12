@@ -1,29 +1,19 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const path = require('path')
-const cors = require('cors')
 
 const app = express()
 const server = http.createServer(app)
 
-// Enable CORS for all routes
-app.use(cors({
-  origin: true, // Allow all origins in development
-  credentials: true
-}))
-
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')))
-
 const io = new Server(server, {
   cors: {
-    origin: '*', // Allow all origins for WebSocket connections
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.CLIENT_URL || 'http://localhost:3000'
+      : 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true
+  transports: ['websocket', 'polling']
 })
 
 app.get('/health', (req, res) => {
@@ -34,10 +24,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Serve the main HTML file for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.use('/', express.static('public'))
 
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`)
@@ -80,36 +67,19 @@ io.on('connection', (socket) => {
   })
 
   socket.on('webrtc_offer', (event) => {
-    console.log(`[${socket.id}] Received webrtc_offer for room ${event.roomId}`);
-    console.log('Offer SDP:', event.sdp ? 'SDP received' : 'No SDP');
-    
-    // Broadcast the offer to the other peer in the room
-    socket.to(event.roomId).emit('webrtc_offer', {
-      sdp: event.sdp,
-      roomId: event.roomId
-    });
-  });
+    console.log(`Broadcasting webrtc_offer event to peers in room ${event.roomId}`)
+    socket.to(event.roomId).emit('webrtc_offer', event.sdp)
+  })
 
   socket.on('webrtc_answer', (event) => {
-    console.log(`[${socket.id}] Received webrtc_answer for room ${event.roomId}`);
-    console.log('Answer SDP:', event.sdp ? 'SDP received' : 'No SDP');
-    
-    // Broadcast the answer to the other peer in the room
-    socket.to(event.roomId).emit('webrtc_answer', {
-      sdp: event.sdp,
-      roomId: event.roomId
-    });
-  });
+    console.log(`Broadcasting webrtc_answer event to peers in room ${event.roomId}`)
+    socket.to(event.roomId).emit('webrtc_answer', event.sdp)
+  })
 
   socket.on('webrtc_ice_candidate', (event) => {
-    console.log(`[${socket.id}] Received ICE candidate for room ${event.roomId}`);
-    
-    // Broadcast the ICE candidate to the other peer in the room
-    socket.to(event.roomId).emit('webrtc_ice_candidate', {
-      candidate: event.candidate,
-      roomId: event.roomId
-    });
-  });
+    console.log(`Broadcasting webrtc_ice_candidate event to peers in room ${event.roomId}`)
+    socket.to(event.roomId).emit('webrtc_ice_candidate', event)
+  })
 })
 
 const port = process.env.PORT || 3000
