@@ -80,19 +80,36 @@ io.on('connection', (socket) => {
   })
 
   socket.on('webrtc_offer', (event) => {
-    console.log(`Broadcasting webrtc_offer event to peers in room ${event.roomId}`)
-    socket.to(event.roomId).emit('webrtc_offer', event.sdp)
-  })
+    console.log(`[${socket.id}] Received webrtc_offer for room ${event.roomId}`);
+    console.log('Offer SDP:', event.sdp ? 'SDP received' : 'No SDP');
+    
+    // Broadcast the offer to the other peer in the room
+    socket.to(event.roomId).emit('webrtc_offer', {
+      sdp: event.sdp,
+      roomId: event.roomId
+    });
+  });
 
   socket.on('webrtc_answer', (event) => {
-    console.log(`Broadcasting webrtc_answer event to peers in room ${event.roomId}`)
-    socket.to(event.roomId).emit('webrtc_answer', event.sdp)
-  })
+    console.log(`[${socket.id}] Received webrtc_answer for room ${event.roomId}`);
+    console.log('Answer SDP:', event.sdp ? 'SDP received' : 'No SDP');
+    
+    // Broadcast the answer to the other peer in the room
+    socket.to(event.roomId).emit('webrtc_answer', {
+      sdp: event.sdp,
+      roomId: event.roomId
+    });
+  });
 
   socket.on('webrtc_ice_candidate', (event) => {
-    console.log(`Broadcasting webrtc_ice_candidate event to peers in room ${event.roomId}`)
-    socket.to(event.roomId).emit('webrtc_ice_candidate', event)
-  })
+    console.log(`[${socket.id}] Received ICE candidate for room ${event.roomId}`);
+    
+    // Broadcast the ICE candidate to the other peer in the room
+    socket.to(event.roomId).emit('webrtc_ice_candidate', {
+      candidate: event.candidate,
+      roomId: event.roomId
+    });
+  });
 })
 
 const port = process.env.PORT || 3000
