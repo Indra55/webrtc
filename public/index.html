@@ -1,427 +1,1211 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>WebRTC Video Conference</title>
-    <style type="text/css">
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>hertz. — Video Conference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Animated Grid Background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridMove 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes gridMove {
+      0% {
+        transform: translate(0, 0);
       }
 
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #ffffff;
-        overflow-x: hidden;
+      100% {
+        transform: translate(50px, 50px);
+      }
+    }
+
+    /* Radial gradient overlay */
+    .radial-glow {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
       }
 
-      #room-selection-container {
-        background: rgba(20, 20, 20, 0.8);
-        backdrop-filter: blur(20px);
-        padding: 3.5rem 3rem;
-        border-radius: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
-        max-width: 480px;
-        width: 90%;
-        text-align: center;
-        animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      50% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1.1);
       }
+    }
 
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+    /* Scanline Effect */
+    .scanlines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg,
+          rgba(0, 0, 0, 0.15) 0px,
+          transparent 1px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.15) 3px);
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.03;
+      animation: scanlines 8s linear infinite;
+    }
 
-      #room-selection-container h1 {
-        color: #ffffff;
-        font-size: 2.25rem;
-        margin-bottom: 0.75rem;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-      }
-
-      #room-selection-container label {
-        display: block;
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 0.95rem;
-        margin-bottom: 2rem;
-        line-height: 1.6;
-        font-weight: 400;
-      }
-
-      #room-input {
-        width: 100%;
-        padding: 1.1rem 1.5rem;
-        font-size: 1rem;
-        background: rgba(0, 0, 0, 0.4);
-        color: #ffffff;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        outline: none;
-        font-weight: 400;
-      }
-
-      #room-input::placeholder {
-        color: rgba(255, 255, 255, 0.3);
-      }
-
-      #room-input:focus {
-        border-color: rgba(255, 255, 255, 0.3);
-        background: rgba(0, 0, 0, 0.6);
-        transform: translateY(-1px);
-      }
-
-      #connect-button {
-        width: 100%;
-        padding: 1.1rem 2rem;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: #000000;
-        background: #ffffff;
-        border: none;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
-      }
-
-      #connect-button:hover {
-        background: #f5f5f5;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 30px rgba(255, 255, 255, 0.25);
-      }
-
-      #connect-button:active {
+    @keyframes scanlines {
+      0% {
         transform: translateY(0);
       }
 
-      #video-chat-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100vh;
-        background: #000;
-        display: none;
+      100% {
+        transform: translateY(10px);
+      }
+    }
+
+    /* Noise Texture */
+    .noise {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.02;
+      z-index: 9998;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      animation: noise 1s steps(10) infinite;
+    }
+
+    @keyframes noise {
+
+      0%,
+      100% {
+        transform: translate(0, 0);
       }
 
-      #remote-video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        background: #0a0a0a;
+      10% {
+        transform: translate(-5%, -5%);
+      }
+
+      20% {
+        transform: translate(-10%, 5%);
+      }
+
+      30% {
+        transform: translate(5%, -10%);
+      }
+
+      40% {
+        transform: translate(-5%, 15%);
+      }
+
+      50% {
+        transform: translate(-10%, 5%);
+      }
+
+      60% {
+        transform: translate(15%, 0);
+      }
+
+      70% {
+        transform: translate(0, 10%);
+      }
+
+      80% {
+        transform: translate(-15%, 0);
+      }
+
+      90% {
+        transform: translate(10%, 5%);
+      }
+    }
+
+    /* Floating Particles */
+    .particle {
+      position: fixed;
+      width: 2px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 1;
+      }
+
+      90% {
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(-100px) translateX(100px);
+        opacity: 0;
+      }
+    }
+
+    #room-selection-container {
+      position: relative;
+      z-index: 1;
+      background: rgba(10, 10, 10, 0.6);
+      backdrop-filter: blur(40px);
+      padding: 4rem 3.5rem;
+      border-radius: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 30px 90px rgba(0, 0, 0, 0.9);
+      max-width: 520px;
+      width: 90%;
+      text-align: center;
+      animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Geometric corner accents */
+    #room-selection-container::before,
+    #room-selection-container::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #room-selection-container::before {
+      top: -1px;
+      left: -1px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    #room-selection-container::after {
+      bottom: -1px;
+      right: -1px;
+      border-left: none;
+      border-top: none;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .logo {
+      font-size: 3rem;
+      font-weight: 300;
+      margin-bottom: 0.5rem;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      background-size: 200% 200%;
+      animation: shimmer 3s ease-in-out infinite;
+      cursor: default;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .logo:hover {
+      animation: shimmer 3s ease-in-out infinite, glitch 0.3s ease;
+    }
+
+    @keyframes shimmer {
+
+      0%,
+      100% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes glitch {
+      0% {
+        transform: translate(0);
+      }
+
+      20% {
+        transform: translate(-2px, 2px);
+      }
+
+      40% {
+        transform: translate(-2px, -2px);
+      }
+
+      60% {
+        transform: translate(2px, 2px);
+      }
+
+      80% {
+        transform: translate(2px, -2px);
+      }
+
+      100% {
+        transform: translate(0);
+      }
+    }
+
+    #room-selection-container h1 {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    #room-selection-container label {
+      display: block;
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 0.9rem;
+      margin-bottom: 2.5rem;
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    #room-input {
+      width: 100%;
+      padding: 1.2rem 1.5rem;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1px;
+      margin-bottom: 1.5rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      font-weight: 300;
+      font-family: 'Space Grotesk', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    #room-input::placeholder {
+      color: rgba(255, 255, 255, 0.2);
+      font-weight: 300;
+    }
+
+    #room-input:focus {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.03);
+    }
+
+    #connect-button {
+      position: relative;
+      width: 100%;
+      padding: 1.2rem 2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #000000;
+      background: #ffffff;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow: hidden;
+    }
+
+    #connect-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    #connect-button::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.1);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    #connect-button:hover::before {
+      left: 100%;
+    }
+
+    #connect-button:active::after {
+      width: 300px;
+      height: 300px;
+    }
+
+    #connect-button:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255, 255, 255, 0.2);
+    }
+
+    #connect-button:active {
+      transform: translateY(0);
+    }
+
+    #connect-button.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    #connect-button.loading::before {
+      left: -100%;
+      animation: loading 1s linear infinite;
+    }
+
+    @keyframes loading {
+      0% {
+        left: -100%;
+      }
+
+      100% {
+        left: 100%;
+      }
+    }
+
+    /* Decorative line */
+    .decorative-line {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      margin: 2rem auto 2.5rem;
+      animation: lineGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes lineGlow {
+
+      0%,
+      100% {
+        opacity: 0.5;
+        width: 60px;
+      }
+
+      50% {
+        opacity: 1;
+        width: 80px;
+      }
+    }
+
+    #video-chat-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background: #000;
+      display: none;
+    }
+
+    #remote-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #000000;
+    }
+
+    #local-video {
+      position: absolute;
+      bottom: 110px;
+      right: 24px;
+      width: 300px;
+      height: 225px;
+      border-radius: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      object-fit: cover;
+      z-index: 10;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #000000;
+    }
+
+    #local-video:hover {
+      transform: scale(1.02);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .controls-container {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 14px;
+      z-index: 20;
+      background: rgba(10, 10, 10, 0.8);
+      padding: 18px 28px;
+      border-radius: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(40px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .control-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+    }
+
+    .control-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%);
+      transition: width 0.4s, height 0.4s;
+    }
+
+    .control-btn:active::after {
+      width: 100px;
+      height: 100px;
+    }
+
+    .control-btn svg {
+      width: 20px;
+      height: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .control-btn.active {
+      background: rgba(255, 255, 255, 0.95);
+      color: #000000;
+      border-color: rgba(255, 255, 255, 0.95);
+    }
+
+    .control-btn.end-call {
+      background: #ffffff;
+      color: #000000;
+      width: 58px;
+      height: 58px;
+      border-color: #ffffff;
+    }
+
+    .control-btn.end-call:hover {
+      background: #e0e0e0;
+      border-color: #e0e0e0;
+      transform: translateY(-2px) scale(1.05);
+    }
+
+    .control-btn.disabled {
+      background: rgba(100, 100, 100, 0.3);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .participant-info {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      background: rgba(10, 10, 10, 0.8);
+      padding: 16px 24px;
+      border-radius: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(40px);
+      z-index: 15;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .participant-info p {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.75rem;
+      margin: 0;
+      font-weight: 400;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .participant-info .room-id {
+      color: #ffffff;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0.5px;
+    }
+
+    .connection-status {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(10, 10, 10, 0.8);
+      padding: 12px 20px;
+      border-radius: 1px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(40px);
+      z-index: 15;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+
+    .connection-status.connecting {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .connection-status.connected {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    .connection-status.connected::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ffffff;
+      margin-right: 8px;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+    }
+
+    .connection-status.failed {
+      border-color: rgba(150, 150, 150, 0.3);
+      color: rgba(150, 150, 150, 0.8);
+    }
+
+    .video-label {
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 1px;
+      font-size: 0.75rem;
+      font-weight: 400;
+      backdrop-filter: blur(20px);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    #local-video-label {
+      position: absolute;
+      bottom: 120px;
+      right: 36px;
+      z-index: 11;
+    }
+
+    /* ========== RESPONSIVE DESIGN ========== */
+
+    /* Tablet Responsive */
+    @media (max-width: 1024px) {
+      body::before {
+        background-size: 40px 40px;
+      }
+
+      #room-selection-container {
+        padding: 3.5rem 3rem;
+        max-width: 480px;
       }
 
       #local-video {
-        position: absolute;
+        width: 240px;
+        height: 180px;
         bottom: 110px;
-        right: 24px;
-        width: 300px;
-        height: 225px;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
-        object-fit: cover;
-        z-index: 10;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: #0a0a0a;
-      }
-
-      .controls-container {
-        position: absolute;
-        bottom: 32px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 12px;
-        z-index: 20;
-        background: rgba(20, 20, 20, 0.85);
-        padding: 16px 24px;
-        border-radius: 60px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      }
-
-      .control-btn {
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
-        position: relative;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      .control-btn svg {
-        width: 22px;
-        height: 22px;
-        transition: all 0.3s ease;
-      }
-
-      .control-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
-        transform: scale(1.08);
-      }
-
-      .control-btn:active {
-        transform: scale(0.96);
-      }
-
-      .control-btn.active {
-        background: rgba(255, 255, 255, 0.95);
-        color: #000000;
-      }
-
-      .control-btn.end-call {
-        background: #ef4444;
-        color: #ffffff;
-        width: 56px;
-        height: 56px;
-      }
-
-      .control-btn.end-call:hover {
-        background: #dc2626;
-        transform: scale(1.08);
-      }
-
-      .control-btn.disabled {
-        background: rgba(239, 68, 68, 0.9);
-      }
-
-      .participant-info {
-        position: absolute;
-        top: 24px;
-        left: 24px;
-        background: rgba(20, 20, 20, 0.85);
-        padding: 14px 22px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
-        z-index: 15;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-      }
-
-      .participant-info p {
-        color: rgba(255, 255, 255, 0.6);
-        font-size: 0.85rem;
-        margin: 0;
-        font-weight: 500;
-        letter-spacing: 0.3px;
-      }
-
-      .participant-info .room-id {
-        color: #ffffff;
-        font-weight: 600;
-      }
-
-      .connection-status {
-        position: absolute;
-        top: 24px;
-        right: 24px;
-        background: rgba(20, 20, 20, 0.85);
-        padding: 10px 18px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
-        z-index: 15;
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.6);
-      }
-
-      .connection-status.connecting {
-        border-color: rgba(251, 191, 36, 0.3);
-        color: #fbbf24;
-      }
-
-      .connection-status.connected {
-        border-color: rgba(34, 197, 94, 0.3);
-        color: #22c55e;
-      }
-
-      .connection-status.failed {
-        border-color: rgba(239, 68, 68, 0.3);
-        color: #ef4444;
-      }
-
-      .video-label {
-        background: rgba(0, 0, 0, 0.75);
-        color: #ffffff;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
-        letter-spacing: 0.3px;
+        right: 20px;
       }
 
       #local-video-label {
-        position: absolute;
         bottom: 120px;
-        right: 36px;
-        z-index: 11;
+        right: 32px;
+      }
+    }
+
+    /* Mobile Landscape */
+    @media (max-width: 768px) and (orientation: landscape) {
+      #room-selection-container {
+        padding: 2rem 2.5rem;
+        max-width: 420px;
       }
 
-      @media (max-width: 768px) {
-        #room-selection-container {
-          padding: 2rem 1.5rem;
-          width: 92%;
-          border-radius: 20px;
-        }
-
-        #local-video {
-          width: 120px;
-          height: 90px;
-          bottom: 100px;
-          right: 12px;
-        }
-
-        .controls-container {
-          bottom: 20px;
-          gap: 10px;
-          padding: 12px 18px;
-        }
-
-        .control-btn {
-          width: 46px;
-          height: 46px;
-        }
+      .logo {
+        font-size: 2.2rem;
       }
-    </style>
-  </head>
-  <body>
-    <div id="room-selection-container">
-      <h1>Video Conference</h1>
-      <label>Enter room ID to join the conference</label>
-      <input id="room-input" type="text" placeholder="meeting-room-123" />
-      <button id="connect-button">Connect</button>
+
+      #room-selection-container h1 {
+        font-size: 0.7rem;
+      }
+
+      #local-video {
+        width: 160px;
+        height: 120px;
+        bottom: 90px;
+        right: 16px;
+      }
+
+      .controls-container {
+        bottom: 16px;
+        padding: 12px 20px;
+        gap: 8px;
+      }
+
+      .control-btn {
+        width: 44px;
+        height: 44px;
+      }
+
+      .control-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .control-btn.end-call {
+        width: 48px;
+        height: 48px;
+      }
+
+      .participant-info,
+      .connection-status {
+        padding: 10px 16px;
+        font-size: 0.7rem;
+      }
+    }
+
+    /* Mobile Portrait */
+    @media (max-width: 768px) {
+      body::before {
+        background-size: 30px 30px;
+      }
+
+      .radial-glow {
+        width: 500px;
+        height: 500px;
+      }
+
+      #room-selection-container {
+        padding: 2.5rem 1.8rem;
+        width: 94%;
+        max-width: 400px;
+      }
+
+      #room-selection-container::before,
+      #room-selection-container::after {
+        width: 16px;
+        height: 16px;
+      }
+
+      .logo {
+        font-size: 2.5rem;
+        letter-spacing: -1.5px;
+      }
+
+      #room-selection-container h1 {
+        font-size: 0.7rem;
+        letter-spacing: 2.5px;
+        margin-bottom: 0.4rem;
+      }
+
+      #room-selection-container label {
+        font-size: 0.85rem;
+        margin-bottom: 2rem;
+      }
+
+      .decorative-line {
+        width: 50px;
+        margin: 1.5rem auto 2rem;
+      }
+
+      #room-input {
+        padding: 1rem 1.2rem;
+        font-size: 0.95rem;
+        margin-bottom: 1.2rem;
+      }
+
+      #connect-button {
+        padding: 1.1rem 1.8rem;
+        font-size: 0.8rem;
+        letter-spacing: 1.5px;
+      }
+
+      /* Video Chat Mobile Adjustments */
+      #local-video {
+        width: 100px;
+        height: 75px;
+        bottom: 90px;
+        right: 12px;
+        border-radius: 2px;
+      }
+
+      #local-video:hover {
+        transform: scale(1);
+      }
+
+      #local-video-label {
+        bottom: 100px;
+        right: 18px;
+        font-size: 0.65rem;
+        padding: 6px 10px;
+      }
+
+      .controls-container {
+        bottom: 16px;
+        gap: 8px;
+        padding: 12px 16px;
+        border-radius: 2px;
+      }
+
+      .control-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 2px;
+      }
+
+      .control-btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .control-btn.end-call {
+        width: 54px;
+        height: 54px;
+      }
+
+      .participant-info {
+        top: 16px;
+        left: 16px;
+        padding: 12px 18px;
+        font-size: 0.7rem;
+      }
+
+      .participant-info p {
+        font-size: 0.7rem;
+        letter-spacing: 0.8px;
+      }
+
+      .connection-status {
+        top: 16px;
+        right: 16px;
+        padding: 10px 16px;
+        font-size: 0.65rem;
+        letter-spacing: 0.8px;
+      }
+
+      .connection-status.connected::before {
+        width: 5px;
+        height: 5px;
+        margin-right: 6px;
+      }
+    }
+
+    /* Small Mobile Phones */
+    @media (max-width: 480px) {
+      #room-selection-container {
+        padding: 2rem 1.5rem;
+        width: 95%;
+      }
+
+      .logo {
+        font-size: 2.2rem;
+      }
+
+      #room-selection-container h1 {
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+      }
+
+      #room-selection-container label {
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+
+      #room-input {
+        padding: 0.95rem 1.1rem;
+        font-size: 0.9rem;
+      }
+
+      #connect-button {
+        padding: 1rem 1.5rem;
+        font-size: 0.75rem;
+      }
+
+      #local-video {
+        width: 90px;
+        height: 68px;
+        bottom: 80px;
+        right: 10px;
+      }
+
+      #local-video-label {
+        bottom: 88px;
+        right: 14px;
+        font-size: 0.6rem;
+        padding: 5px 8px;
+      }
+
+      .controls-container {
+        bottom: 12px;
+        gap: 6px;
+        padding: 10px 14px;
+      }
+
+      .control-btn {
+        width: 46px;
+        height: 46px;
+      }
+
+      .control-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .control-btn.end-call {
+        width: 50px;
+        height: 50px;
+      }
+
+      .participant-info,
+      .connection-status {
+        padding: 10px 14px;
+        font-size: 0.65rem;
+      }
+
+      .participant-info {
+        top: 12px;
+        left: 12px;
+      }
+
+      .connection-status {
+        top: 12px;
+        right: 12px;
+      }
+    }
+
+    /* Extra Small Devices */
+    @media (max-width: 360px) {
+      #room-selection-container {
+        padding: 1.8rem 1.2rem;
+      }
+
+      .logo {
+        font-size: 2rem;
+      }
+
+      #room-selection-container h1 {
+        font-size: 0.6rem;
+      }
+
+      .decorative-line {
+        width: 40px;
+        margin: 1.2rem auto 1.5rem;
+      }
+
+      #room-input {
+        padding: 0.9rem 1rem;
+        font-size: 0.85rem;
+      }
+
+      #connect-button {
+        padding: 0.95rem 1.3rem;
+        font-size: 0.7rem;
+      }
+
+      .controls-container {
+        gap: 5px;
+        padding: 8px 12px;
+      }
+
+      .control-btn {
+        width: 42px;
+        height: 42px;
+      }
+
+      .control-btn.end-call {
+        width: 46px;
+        height: 46px;
+      }
+    }
+
+    /* Touch Device Optimizations */
+    @media (hover: none) and (pointer: coarse) {
+
+      .control-btn,
+      #connect-button,
+      #room-input {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      .control-btn:active {
+        transform: scale(0.95);
+      }
+
+      #connect-button:active {
+        transform: translateY(0) scale(0.98);
+      }
+
+      /* Prevent hover effects on touch devices */
+      .control-btn:hover {
+        transform: none;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .control-btn.active:hover {
+        background: rgba(255, 255, 255, 0.95);
+      }
+
+      .control-btn.end-call:hover {
+        background: #ffffff;
+        transform: none;
+      }
+
+      #local-video:hover {
+        transform: none;
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+
+      #connect-button:hover {
+        transform: none;
+        background: #ffffff;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Visual Effects -->
+  <div class="radial-glow"></div>
+  <div class="scanlines"></div>
+  <div class="noise"></div>
+
+  <div id="room-selection-container">
+    <div class="logo">hertz.</div>
+    <h1>Video Conference</h1>
+    <div class="decorative-line"></div>
+    <label>Enter room ID to join the conference</label>
+    <input id="room-input" type="text" placeholder="meeting-room-123" />
+    <button id="connect-button">Connect</button>
+  </div>
+
+  <div id="video-chat-container">
+    <div class="participant-info">
+      <p>Room: <span class="room-id" id="room-id-display"></span></p>
     </div>
 
-    <div id="video-chat-container">
-      <div class="participant-info">
-        <p>Room: <span class="room-id" id="room-id-display"></span></p>
-      </div>
-
-      <div class="connection-status" id="connection-status">
-        Connecting...
-      </div>
-
-      <video id="remote-video" autoplay="autoplay" playsinline></video>
-      <video id="local-video" autoplay="autoplay" muted="muted" playsinline></video>
-      <div class="video-label" id="local-video-label">You</div>
-
-      <div class="controls-container">
-        <button class="control-btn active" id="mic-btn" title="Toggle Microphone">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-            <line x1="12" y1="19" x2="12" y2="23"></line>
-            <line x1="8" y1="23" x2="16" y2="23"></line>
-          </svg>
-        </button>
-        <button class="control-btn active" id="camera-btn" title="Toggle Camera">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 7l-7 5 7 5V7z"></path>
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-          </svg>
-        </button>
-        <button class="control-btn end-call" id="end-call-btn" title="End Call">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-          </svg>
-        </button>
-      </div>
+    <div class="connection-status" id="connection-status">
+      Connecting...
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="text/javascript">
-      const roomSelectionContainer = document.getElementById('room-selection-container')
-      const roomInput = document.getElementById('room-input')
-      const connectButton = document.getElementById('connect-button')
+    <video id="remote-video" autoplay="autoplay" playsinline></video>
+    <video id="local-video" autoplay="autoplay" muted="muted" playsinline></video>
+    <div class="video-label" id="local-video-label">You</div>
 
-      const videoChatContainer = document.getElementById('video-chat-container')
-      const localVideoComponent = document.getElementById('local-video')
-      const remoteVideoComponent = document.getElementById('remote-video')
-      const roomIdDisplay = document.getElementById('room-id-display')
-      const connectionStatus = document.getElementById('connection-status')
+    <div class="controls-container">
+      <button class="control-btn active" id="mic-btn" title="Toggle Microphone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+      <button class="control-btn active" id="camera-btn" title="Toggle Camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M23 7l-7 5 7 5V7z"></path>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+      </button>
+      <button class="control-btn end-call" id="end-call-btn" title="End Call">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path
+            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+          </path>
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
 
-      const micBtn = document.getElementById('mic-btn')
-      const cameraBtn = document.getElementById('camera-btn')
-      const endCallBtn = document.getElementById('end-call-btn')
-
-      const socket = io()
-      const mediaConstraints = {
-        audio: true,
-        video: { width: 1280, height: 720 },
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+    // Create floating particles
+    function createParticles() {
+      const particleCount = 20;
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDuration = (Math.random() * 20 + 15) + 's';
+        particle.style.animationDelay = Math.random() * 5 + 's';
+        particle.style.animation = `float ${Math.random() * 20 + 15}s linear infinite`;
+        particle.style.animationDelay = Math.random() * 5 + 's';
+        document.body.appendChild(particle);
       }
-      let localStream
-      let remoteStream
-      let isRoomCreator
-      let rtcPeerConnection
-      let roomId
-      let isMicOn = true
-      let isCameraOn = true
+    }
+    createParticles();
 
-      // UPDATED: ICE servers with FREE TURN servers
-      const iceServers = {
-        iceServers: [
-          // Google STUN servers
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          
-          // Free TURN servers from Open Relay Project
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-          {
-            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-        ],
-        iceCandidatePoolSize: 10,
-      }
+    const roomSelectionContainer = document.getElementById('room-selection-container')
+    const roomInput = document.getElementById('room-input')
+    const connectButton = document.getElementById('connect-button')
 
-      const micOnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    const videoChatContainer = document.getElementById('video-chat-container')
+    const localVideoComponent = document.getElementById('local-video')
+    const remoteVideoComponent = document.getElementById('remote-video')
+    const roomIdDisplay = document.getElementById('room-id-display')
+    const connectionStatus = document.getElementById('connection-status')
+
+    const micBtn = document.getElementById('mic-btn')
+    const cameraBtn = document.getElementById('camera-btn')
+    const endCallBtn = document.getElementById('end-call-btn')
+
+    const socket = io()
+    const mediaConstraints = {
+      audio: true,
+      video: { width: 1280, height: 720 },
+    }
+    let localStream
+    let remoteStream
+    let isRoomCreator
+    let rtcPeerConnection
+    let roomId
+    let isMicOn = true
+    let isCameraOn = true
+
+    const iceServers = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        {
+          urls: 'turn:openrelay.metered.ca:80',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+        {
+          urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+          username: 'openrelayproject',
+          credential: 'openrelayproject',
+        },
+      ],
+      iceCandidatePoolSize: 10,
+    }
+
+    const micOnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
         <line x1="12" y1="19" x2="12" y2="23"></line>
         <line x1="8" y1="23" x2="16" y2="23"></line>
       </svg>`
 
-      const micOffIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    const micOffIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="1" y1="1" x2="23" y2="23"></line>
         <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
         <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
@@ -429,327 +1213,328 @@
         <line x1="8" y1="23" x2="16" y2="23"></line>
       </svg>`
 
-      const cameraOnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    const cameraOnIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M23 7l-7 5 7 5V7z"></path>
         <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
       </svg>`
 
-      const cameraOffIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    const cameraOffIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path>
         <line x1="1" y1="1" x2="23" y2="23"></line>
       </svg>`
 
-      connectButton.addEventListener('click', () => {
+    connectButton.addEventListener('click', () => {
+      connectButton.classList.add('loading');
+      joinRoom(roomInput.value)
+    })
+
+    roomInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        connectButton.classList.add('loading');
         joinRoom(roomInput.value)
-      })
+      }
+    })
 
-      roomInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          joinRoom(roomInput.value)
-        }
-      })
+    micBtn.addEventListener('click', toggleMic)
+    cameraBtn.addEventListener('click', toggleCamera)
+    endCallBtn.addEventListener('click', endCall)
 
-      micBtn.addEventListener('click', toggleMic)
-      cameraBtn.addEventListener('click', toggleCamera)
-      endCallBtn.addEventListener('click', endCall)
+    socket.on('room_created', async () => {
+      console.log('Socket event callback: room_created')
+      await setLocalStream(mediaConstraints)
+      isRoomCreator = true
+    })
 
-      socket.on('room_created', async () => {
-        console.log('Socket event callback: room_created')
-        await setLocalStream(mediaConstraints)
-        isRoomCreator = true
-      })
+    socket.on('room_joined', async () => {
+      console.log('Socket event callback: room_joined')
+      await setLocalStream(mediaConstraints)
+      socket.emit('start_call', roomId)
+    })
 
-      socket.on('room_joined', async () => {
-        console.log('Socket event callback: room_joined')
-        await setLocalStream(mediaConstraints)
-        socket.emit('start_call', roomId)
-      })
+    socket.on('full_room', () => {
+      console.log('Socket event callback: full_room')
+      connectButton.classList.remove('loading');
+      alert('The room is full, please try another one')
+    })
 
-      socket.on('full_room', () => {
-        console.log('Socket event callback: full_room')
-        alert('The room is full, please try another one')
-      })
+    socket.on('start_call', async () => {
+      console.log('Socket event callback: start_call')
 
-      socket.on('start_call', async () => {
-        console.log('Socket event callback: start_call')
+      if (isRoomCreator) {
+        rtcPeerConnection = new RTCPeerConnection(iceServers)
+        addLocalTracks(rtcPeerConnection)
+        rtcPeerConnection.ontrack = setRemoteStream
+        rtcPeerConnection.onicecandidate = sendIceCandidate
+        setupConnectionMonitoring(rtcPeerConnection)
+        await createOffer(rtcPeerConnection)
+      }
+    })
 
-        if (isRoomCreator) {
-          rtcPeerConnection = new RTCPeerConnection(iceServers)
-          addLocalTracks(rtcPeerConnection)
-          rtcPeerConnection.ontrack = setRemoteStream
-          rtcPeerConnection.onicecandidate = sendIceCandidate
-          
-          // Add connection state monitoring
-          setupConnectionMonitoring(rtcPeerConnection)
-          
-          await createOffer(rtcPeerConnection)
-        }
-      })
+    socket.on('webrtc_offer', async (event) => {
+      console.log('Socket event callback: webrtc_offer')
 
-      socket.on('webrtc_offer', async (event) => {
-        console.log('Socket event callback: webrtc_offer')
-
-        if (!isRoomCreator) {
-          rtcPeerConnection = new RTCPeerConnection(iceServers)
-          addLocalTracks(rtcPeerConnection)
-          rtcPeerConnection.ontrack = setRemoteStream
-          rtcPeerConnection.onicecandidate = sendIceCandidate
-          
-          // Add connection state monitoring
-          setupConnectionMonitoring(rtcPeerConnection)
-          
-          rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event))
-          await createAnswer(rtcPeerConnection)
-        }
-      })
-
-      socket.on('webrtc_answer', (event) => {
-        console.log('Socket event callback: webrtc_answer')
+      if (!isRoomCreator) {
+        rtcPeerConnection = new RTCPeerConnection(iceServers)
+        addLocalTracks(rtcPeerConnection)
+        rtcPeerConnection.ontrack = setRemoteStream
+        rtcPeerConnection.onicecandidate = sendIceCandidate
+        setupConnectionMonitoring(rtcPeerConnection)
         rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event))
+        await createAnswer(rtcPeerConnection)
+      }
+    })
+
+    socket.on('webrtc_answer', (event) => {
+      console.log('Socket event callback: webrtc_answer')
+      rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event))
+    })
+
+    socket.on('webrtc_ice_candidate', (event) => {
+      console.log('Socket event callback: webrtc_ice_candidate')
+      const candidate = new RTCIceCandidate({
+        sdpMLineIndex: event.label,
+        candidate: event.candidate,
       })
+      rtcPeerConnection.addIceCandidate(candidate)
+    })
 
-      socket.on('webrtc_ice_candidate', (event) => {
-        console.log('Socket event callback: webrtc_ice_candidate')
-        const candidate = new RTCIceCandidate({
-          sdpMLineIndex: event.label,
-          candidate: event.candidate,
-        })
-        rtcPeerConnection.addIceCandidate(candidate)
-      })
+    socket.on('user_left', () => {
+      console.log('Socket event callback: user_left')
+      remoteVideoComponent.srcObject = null
+      updateConnectionStatus('disconnected', 'Participant left')
+      alert('The other participant has left the call')
+    })
 
-      socket.on('user_left', () => {
-        console.log('Socket event callback: user_left')
-        remoteVideoComponent.srcObject = null
-        updateConnectionStatus('disconnected', 'Participant left')
-        alert('The other participant has left the call')
-      })
+    function setupConnectionMonitoring(pc) {
+      pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState)
+        updateConnectionStatus(pc.connectionState)
+      }
 
-      // NEW: Connection monitoring and diagnostics
-      function setupConnectionMonitoring(pc) {
-        pc.onconnectionstatechange = () => {
-          console.log('Connection state:', pc.connectionState)
-          updateConnectionStatus(pc.connectionState)
-        }
+      pc.oniceconnectionstatechange = () => {
+        console.log('ICE connection state:', pc.iceConnectionState)
 
-        pc.oniceconnectionstatechange = () => {
-          console.log('ICE connection state:', pc.iceConnectionState)
-          
-          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-            checkConnectionType(pc)
-          }
-        }
-
-        pc.onicegatheringstatechange = () => {
-          console.log('ICE gathering state:', pc.iceGatheringState)
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          checkConnectionType(pc)
         }
       }
 
-      function updateConnectionStatus(state, customText = null) {
-        const statusEl = connectionStatus
-        
-        if (customText) {
-          statusEl.textContent = customText
-          return
-        }
+      pc.onicegatheringstatechange = () => {
+        console.log('ICE gathering state:', pc.iceGatheringState)
+      }
+    }
 
-        statusEl.className = 'connection-status'
-        
-        switch(state) {
-          case 'new':
-          case 'connecting':
-            statusEl.classList.add('connecting')
-            statusEl.textContent = 'Connecting...'
-            break
-          case 'connected':
-            statusEl.classList.add('connected')
-            statusEl.textContent = '● Connected'
-            break
-          case 'disconnected':
-            statusEl.classList.add('failed')
-            statusEl.textContent = 'Disconnected'
-            break
-          case 'failed':
-            statusEl.classList.add('failed')
-            statusEl.textContent = 'Connection Failed'
-            break
-        }
+    function updateConnectionStatus(state, customText = null) {
+      const statusEl = connectionStatus
+
+      if (customText) {
+        statusEl.textContent = customText
+        return
       }
 
-      function checkConnectionType(pc) {
-        setTimeout(() => {
-          pc.getStats().then(stats => {
-            stats.forEach(report => {
-              if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                console.log('✅ Active candidate pair:', report)
-                
-                stats.forEach(candidate => {
-                  if (candidate.id === report.localCandidateId) {
-                    console.log('Local candidate type:', candidate.candidateType)
-                    
-                    if (candidate.candidateType === 'relay') {
-                      console.log('🎉 Using TURN relay!')
-                      updateConnectionStatus('connected', '● Connected (TURN)')
-                    } else if (candidate.candidateType === 'srflx') {
-                      console.log('📡 Using STUN (peer-to-peer)')
-                      updateConnectionStatus('connected', '● Connected (P2P)')
-                    } else {
-                      console.log('🏠 Direct connection')
-                      updateConnectionStatus('connected', '● Connected (Direct)')
-                    }
+      statusEl.className = 'connection-status'
+
+      switch (state) {
+        case 'new':
+        case 'connecting':
+          statusEl.classList.add('connecting')
+          statusEl.textContent = 'Connecting...'
+          break
+        case 'connected':
+          statusEl.classList.add('connected')
+          statusEl.textContent = 'Connected'
+          break
+        case 'disconnected':
+          statusEl.classList.add('failed')
+          statusEl.textContent = 'Disconnected'
+          break
+        case 'failed':
+          statusEl.classList.add('failed')
+          statusEl.textContent = 'Connection Failed'
+          break
+      }
+    }
+
+    function checkConnectionType(pc) {
+      setTimeout(() => {
+        pc.getStats().then(stats => {
+          stats.forEach(report => {
+            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+              console.log('✅ Active candidate pair:', report)
+
+              stats.forEach(candidate => {
+                if (candidate.id === report.localCandidateId) {
+                  console.log('Local candidate type:', candidate.candidateType)
+
+                  if (candidate.candidateType === 'relay') {
+                    console.log('🎉 Using TURN relay!')
+                    updateConnectionStatus('connected', 'Connected (TURN)')
+                  } else if (candidate.candidateType === 'srflx') {
+                    console.log('📡 Using STUN (peer-to-peer)')
+                    updateConnectionStatus('connected', 'Connected (P2P)')
+                  } else {
+                    console.log('🏠 Direct connection')
+                    updateConnectionStatus('connected', 'Connected (Direct)')
                   }
-                })
-              }
-            })
+                }
+              })
+            }
           })
-        }, 3000)
-      }
+        })
+      }, 3000)
+    }
 
-      function toggleMic() {
-        if (localStream) {
-          isMicOn = !isMicOn
-          localStream.getAudioTracks()[0].enabled = isMicOn
-          
-          if (isMicOn) {
-            micBtn.classList.add('active')
-            micBtn.classList.remove('disabled')
-            micBtn.innerHTML = micOnIcon
-          } else {
-            micBtn.classList.remove('active')
-            micBtn.classList.add('disabled')
-            micBtn.innerHTML = micOffIcon
-          }
-        }
-      }
+    function toggleMic() {
+      if (localStream) {
+        isMicOn = !isMicOn
+        localStream.getAudioTracks()[0].enabled = isMicOn
 
-      function toggleCamera() {
-        if (localStream) {
-          isCameraOn = !isCameraOn
-          localStream.getVideoTracks()[0].enabled = isCameraOn
-          
-          if (isCameraOn) {
-            cameraBtn.classList.add('active')
-            cameraBtn.classList.remove('disabled')
-            cameraBtn.innerHTML = cameraOnIcon
-          } else {
-            cameraBtn.classList.remove('active')
-            cameraBtn.classList.add('disabled')
-            cameraBtn.innerHTML = cameraOffIcon
-          }
-        }
-      }
-
-      function endCall() {
-        if (roomId) {
-          socket.emit('leave', roomId)
-        }
-
-        if (localStream) {
-          localStream.getTracks().forEach(track => track.stop())
-        }
-
-        if (rtcPeerConnection) {
-          rtcPeerConnection.close()
-        }
-
-        localVideoComponent.srcObject = null
-        remoteVideoComponent.srcObject = null
-
-        videoChatContainer.style.display = 'none'
-        roomSelectionContainer.style.display = 'block'
-        roomInput.value = ''
-
-        localStream = null
-        remoteStream = null
-        rtcPeerConnection = null
-        roomId = null
-        isMicOn = true
-        isCameraOn = true
-
-        micBtn.classList.add('active')
-        micBtn.classList.remove('disabled')
-        micBtn.innerHTML = micOnIcon
-        cameraBtn.classList.add('active')
-        cameraBtn.classList.remove('disabled')
-        cameraBtn.innerHTML = cameraOnIcon
-      }
-
-      function joinRoom(room) {
-        if (room === '') {
-          alert('Please type a room ID')
+        if (isMicOn) {
+          micBtn.classList.add('active')
+          micBtn.classList.remove('disabled')
+          micBtn.innerHTML = micOnIcon
         } else {
-          roomId = room
-          roomIdDisplay.textContent = room
-          socket.emit('join', room)
-          showVideoConference()
+          micBtn.classList.remove('active')
+          micBtn.classList.add('disabled')
+          micBtn.innerHTML = micOffIcon
         }
       }
+    }
 
-      function showVideoConference() {
-        roomSelectionContainer.style.display = 'none'
-        videoChatContainer.style.display = 'block'
-      }
+    function toggleCamera() {
+      if (localStream) {
+        isCameraOn = !isCameraOn
+        localStream.getVideoTracks()[0].enabled = isCameraOn
 
-      async function setLocalStream(mediaConstraints) {
-        try {
-          localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
-          localVideoComponent.srcObject = localStream
-        } catch (error) {
-          console.error('Could not get user media', error)
-          alert('Could not access camera/microphone. Please check permissions.')
+        if (isCameraOn) {
+          cameraBtn.classList.add('active')
+          cameraBtn.classList.remove('disabled')
+          cameraBtn.innerHTML = cameraOnIcon
+        } else {
+          cameraBtn.classList.remove('active')
+          cameraBtn.classList.add('disabled')
+          cameraBtn.innerHTML = cameraOffIcon
         }
       }
+    }
 
-      function addLocalTracks(rtcPeerConnection) {
-        localStream.getTracks().forEach((track) => {
-          rtcPeerConnection.addTrack(track, localStream)
+    function endCall() {
+      if (roomId) {
+        socket.emit('leave', roomId)
+      }
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop())
+      }
+
+      if (rtcPeerConnection) {
+        rtcPeerConnection.close()
+      }
+
+      localVideoComponent.srcObject = null
+      remoteVideoComponent.srcObject = null
+
+      videoChatContainer.style.display = 'none'
+      roomSelectionContainer.style.display = 'block'
+      roomInput.value = ''
+      connectButton.classList.remove('loading');
+
+      localStream = null
+      remoteStream = null
+      rtcPeerConnection = null
+      roomId = null
+      isMicOn = true
+      isCameraOn = true
+
+      micBtn.classList.add('active')
+      micBtn.classList.remove('disabled')
+      micBtn.innerHTML = micOnIcon
+      cameraBtn.classList.add('active')
+      cameraBtn.classList.remove('disabled')
+      cameraBtn.innerHTML = cameraOnIcon
+    }
+
+    function joinRoom(room) {
+      if (room === '') {
+        alert('Please type a room ID')
+        connectButton.classList.remove('loading');
+      } else {
+        roomId = room
+        roomIdDisplay.textContent = room
+        socket.emit('join', room)
+        showVideoConference()
+      }
+    }
+
+    function showVideoConference() {
+      roomSelectionContainer.style.display = 'none'
+      videoChatContainer.style.display = 'block'
+      connectButton.classList.remove('loading');
+    }
+
+    async function setLocalStream(mediaConstraints) {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
+        localVideoComponent.srcObject = localStream
+      } catch (error) {
+        console.error('Could not get user media', error)
+        alert('Could not access camera/microphone. Please check permissions.')
+        connectButton.classList.remove('loading');
+      }
+    }
+
+    function addLocalTracks(rtcPeerConnection) {
+      localStream.getTracks().forEach((track) => {
+        rtcPeerConnection.addTrack(track, localStream)
+      })
+    }
+
+    async function createOffer(rtcPeerConnection) {
+      try {
+        const sessionDescription = await rtcPeerConnection.createOffer()
+        rtcPeerConnection.setLocalDescription(sessionDescription)
+
+        socket.emit('webrtc_offer', {
+          type: 'webrtc_offer',
+          sdp: sessionDescription,
+          roomId,
+        })
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    async function createAnswer(rtcPeerConnection) {
+      try {
+        const sessionDescription = await rtcPeerConnection.createAnswer()
+        rtcPeerConnection.setLocalDescription(sessionDescription)
+
+        socket.emit('webrtc_answer', {
+          type: 'webrtc_answer',
+          sdp: sessionDescription,
+          roomId,
+        })
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    function setRemoteStream(event) {
+      remoteVideoComponent.srcObject = event.streams[0]
+      remoteStream = event.stream
+    }
+
+    function sendIceCandidate(event) {
+      if (event.candidate) {
+        console.log('Sending ICE candidate:', event.candidate.type, event.candidate.candidate)
+        socket.emit('webrtc_ice_candidate', {
+          roomId,
+          label: event.candidate.sdpMLineIndex,
+          candidate: event.candidate.candidate,
         })
       }
+    }
+  </script>
+</body>
 
-      async function createOffer(rtcPeerConnection) {
-        try {
-          const sessionDescription = await rtcPeerConnection.createOffer()
-          rtcPeerConnection.setLocalDescription(sessionDescription)
-          
-          socket.emit('webrtc_offer', {
-            type: 'webrtc_offer',
-            sdp: sessionDescription,
-            roomId,
-          })
-        } catch (error) {
-          console.error(error)
-        }
-      }
-
-      async function createAnswer(rtcPeerConnection) {
-        try {
-          const sessionDescription = await rtcPeerConnection.createAnswer()
-          rtcPeerConnection.setLocalDescription(sessionDescription)
-          
-          socket.emit('webrtc_answer', {
-            type: 'webrtc_answer',
-            sdp: sessionDescription,
-            roomId,
-          })
-        } catch (error) {
-          console.error(error)
-        }
-      }
-
-      function setRemoteStream(event) {
-        remoteVideoComponent.srcObject = event.streams[0]
-        remoteStream = event.stream
-      }
-
-      function sendIceCandidate(event) {
-        if (event.candidate) {
-          console.log('Sending ICE candidate:', event.candidate.type, event.candidate.candidate)
-          socket.emit('webrtc_ice_candidate', {
-            roomId,
-            label: event.candidate.sdpMLineIndex,
-            candidate: event.candidate.candidate,
-          })
-        }
-      }
-    </script>
-  </body>
 </html>
