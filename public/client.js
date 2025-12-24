@@ -22,11 +22,38 @@ let roomId
 
 const iceServers = {
   iceServers: [
+
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
+    
+
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    
+
+    {
+      urls: 'turn:relay.metered.ca:80',
+      username: 'e46a40d3c7c4f0b3c9f1f7be',
+      credential: 'WN4UCxP3D1k2fP9g',
+    },
+    {
+      urls: 'turn:relay.metered.ca:443',
+      username: 'e46a40d3c7c4f0b3c9f1f7be',
+      credential: 'WN4UCxP3D1k2fP9g',
+    },
   ],
 }
 
@@ -61,7 +88,7 @@ socket.on('start_call', async () => {
     rtcPeerConnection = new RTCPeerConnection(iceServers)
     addLocalTracks(rtcPeerConnection)
     rtcPeerConnection.ontrack = setRemoteStream
-    rtcPeerConnection.onicecandidate = sendIceCandidate
+    logConnectionType(rtcPeerConnection)
     await createOffer(rtcPeerConnection)
   }
 })
@@ -110,6 +137,42 @@ function showVideoConference() {
   videoChatContainer.style.display = 'block'
 }
 
+// Add this function to check connection type
+function logConnectionType(pc) {
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log('ICE Candidate Type:', event.candidate.type);
+      console.log('ICE Candidate:', event.candidate.candidate);
+      
+      // Send the candidate (existing code)
+      sendIceCandidate(event);
+    }
+  };
+
+  // Check stats after connection
+  setTimeout(() => {
+    pc.getStats().then(stats => {
+      stats.forEach(report => {
+        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+          console.log('✅ Connection established!');
+          console.log('Local candidate:', report.localCandidateId);
+          console.log('Remote candidate:', report.remoteCandidateId);
+          
+          // Find the actual candidates
+          stats.forEach(r => {
+            if (r.id === report.localCandidateId) {
+              console.log('Connection type:', r.candidateType);
+              // Types: 'host' (direct), 'srflx' (STUN), 'relay' (TURN)
+              if (r.candidateType === 'relay') {
+                console.log('🎉 Using TURN relay!');
+              }
+            }
+          });
+        }
+      });
+    });
+  }, 5000);
+}
 async function setLocalStream(mediaConstraints) {
   try {
     localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
