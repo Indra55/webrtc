@@ -12,8 +12,14 @@ const socket = io({
 })
 const mediaConstraints = {
   audio: true,
-  video: { width: 1280, height: 720 },
+  video: {
+    facingMode: "user",
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    aspectRatio: 16 / 9
+  }
 }
+
 let localStream
 let remoteStream
 let isRoomCreator
@@ -177,10 +183,20 @@ async function setLocalStream(mediaConstraints) {
   try {
     localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
     localVideoComponent.srcObject = localStream
+
+    const track = localStream.getVideoTracks()[0]
+    const capabilities = track.getCapabilities?.()
+
+    if (capabilities?.zoom) {
+      await track.applyConstraints({
+        advanced: [{ zoom: capabilities.zoom.min }]
+      })
+    }
   } catch (error) {
     console.error('Could not get user media', error)
   }
 }
+
 
 function addLocalTracks(rtcPeerConnection) {
   localStream.getTracks().forEach((track) => {
