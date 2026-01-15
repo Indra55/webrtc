@@ -1118,6 +1118,16 @@
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
         </svg>
       </button>
+      <button class="control-btn" id="screen-share-btn" title="Share Screen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
+          <polyline points="8 21 12 17 16 21"></polyline>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+          <polyline points="17 8 22 8 22 13"></polyline>
+          <line x1="22" y1="8" x2="15" y2="15"></line>
+        </svg>
+      </button>
       <button class="control-btn end-call" id="end-call-btn" title="End Call">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
           stroke-linejoin="round">
@@ -1160,6 +1170,7 @@
 
     const micBtn = document.getElementById('mic-btn')
     const cameraBtn = document.getElementById('camera-btn')
+    const screenShareBtn = document.getElementById('screen-share-btn')
     const endCallBtn = document.getElementById('end-call-btn')
 
     const socket = io()
@@ -1174,6 +1185,8 @@
     let roomId
     let isMicOn = true
     let isCameraOn = true
+    let isScreenSharing = false
+    let screenStream = null
 
     const iceServers = {
       iceServers: [
@@ -1237,6 +1250,7 @@
 
     micBtn.addEventListener('click', toggleMic)
     cameraBtn.addEventListener('click', toggleCamera)
+    screenShareBtn.addEventListener('click', toggleScreenShare)
     endCallBtn.addEventListener('click', endCall)
 
     socket.on('room_created', async () => {
@@ -1418,6 +1432,58 @@
       }
     }
 
+    async function toggleScreenShare() {
+      if (!isScreenSharing) {
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+          const screenTrack = screenStream.getVideoTracks()[0]
+
+          screenTrack.onended = () => {
+            stopScreenSharing()
+          }
+
+          if (rtcPeerConnection) {
+            const sender = rtcPeerConnection.getSenders().find(s => s.track && s.track.kind === 'video')
+            if (sender) {
+              sender.replaceTrack(screenTrack)
+            }
+          }
+
+          localVideoComponent.srcObject = screenStream
+          screenShareBtn.classList.add('active')
+          isScreenSharing = true
+        } catch (error) {
+          console.error("Error sharing screen:", error)
+        }
+      } else {
+        stopScreenSharing()
+      }
+    }
+
+    function stopScreenSharing() {
+      if (!isScreenSharing) return
+
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop())
+      }
+
+      if (localStream) {
+        localVideoComponent.srcObject = localStream
+
+        if (rtcPeerConnection) {
+          const videoTrack = localStream.getVideoTracks()[0]
+          const sender = rtcPeerConnection.getSenders().find(s => s.track && s.track.kind === 'video')
+          if (sender) {
+            sender.replaceTrack(videoTrack)
+          }
+        }
+      }
+
+      screenShareBtn.classList.remove('active')
+      isScreenSharing = false
+      screenStream = null
+    }
+
     function endCall() {
       if (roomId) {
         socket.emit('leave', roomId)
@@ -1425,6 +1491,10 @@
 
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop())
+      }
+
+      if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop())
       }
 
       if (rtcPeerConnection) {
@@ -1445,6 +1515,8 @@
       roomId = null
       isMicOn = true
       isCameraOn = true
+      isScreenSharing = false
+      screenStream = null
 
       micBtn.classList.add('active')
       micBtn.classList.remove('disabled')
@@ -1452,6 +1524,7 @@
       cameraBtn.classList.add('active')
       cameraBtn.classList.remove('disabled')
       cameraBtn.innerHTML = cameraOnIcon
+      screenShareBtn.classList.remove('active')
     }
 
     function joinRoom(room) {
